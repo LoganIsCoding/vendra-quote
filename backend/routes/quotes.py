@@ -7,19 +7,9 @@ from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from geometry.engine import analyze
 from backend.models import BoundingBox, CostBreakdown, Features, Geometry, QuoteDocument
 from backend.database import db
+from backend import pricing
 
 router = APIRouter(prefix="/quotes", tags=["quotes"])
-
-
-def _stub_pricing(geometry: dict, quantity: int) -> tuple[CostBreakdown, int]:
-    # TODO: replace with real pricing formula
-    return CostBreakdown(
-        material_cost_per_unit=0.0,
-        machine_time_cost_per_unit=0.0,
-        setup_cost_per_unit=0.0,
-        total_cost_per_unit=0.0,
-        total_order_cost=0.0,
-    ), 5
 
 
 @router.post("")
@@ -39,13 +29,19 @@ async def create_quote(file: UploadFile = File(...), quantity: int = Form(...)):
     finally:
         os.unlink(tmp_path)
 
+    cost_dict, lead_time_days, complexity, stock_dims = pricing.calculate(raw, raw["features"], quantity)
+
     geometry = Geometry(
         bounding_box_mm=BoundingBox(**raw["bounding_box_mm"]),
+        stock_dimensions_mm=BoundingBox(**stock_dims),
         volume_cm3=raw["volume_cm3"],
         surface_area_cm2=raw["surface_area_cm2"],
     )
-    features = Features(**raw["features"])
-    cost_breakdown, lead_time_days = _stub_pricing(raw, quantity)
+    cost_breakdown = CostBreakdown(**cost_dict)
+
+    features_data = raw["features"].copy()
+    features_data["complexity_score"] = complexity
+    features = Features(**features_data)
 
     doc = QuoteDocument(
         file_name=file.filename,
