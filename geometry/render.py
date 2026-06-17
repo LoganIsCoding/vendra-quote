@@ -33,6 +33,11 @@ def render_svg(filepath: str) -> str:
     """
     shape = cq.importers.importStep(filepath)
     svg = getSVG(shape.val(), SVG_OPTS)
+    # cadquery dashes hidden lines with very small stroke-dasharray values. Some
+    # SVG engines (notably the VSCode Simple Browser) mis-render those tiny
+    # dashes into page-wide streaks, so we drop the dasharray and let hidden
+    # lines render solid. They stay distinct from visible edges by color.
+    svg = re.sub(r'\s*stroke-dasharray="[^"]*"', "", svg)
     return _fit_to_content(svg)
 
 
