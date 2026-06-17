@@ -5,6 +5,7 @@ from bson import ObjectId
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 
 from geometry.engine import analyze
+from geometry.render import render_svg
 from backend.models import BoundingBox, CostBreakdown, Features, Geometry, QuoteDocument
 from backend.database import db
 from backend import pricing
@@ -24,6 +25,7 @@ async def create_quote(file: UploadFile = File(...), quantity: int = Form(...)):
 
     try:
         raw = analyze(tmp_path)
+        preview_svg = render_svg(tmp_path)
     except Exception as e:
         raise HTTPException(status_code=422, detail=f"Failed to parse STEP file: {e}")
     finally:
@@ -50,6 +52,7 @@ async def create_quote(file: UploadFile = File(...), quantity: int = Form(...)):
         features=features,
         cost_breakdown=cost_breakdown,
         lead_time_days=lead_time_days,
+        preview_svg=preview_svg,
     )
 
     result = await db.quotes.insert_one(doc.model_dump())

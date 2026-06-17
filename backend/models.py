@@ -40,5 +40,6 @@ class QuoteDocument(BaseModel):
     features: Features
     cost_breakdown: CostBreakdown
     lead_time_days: int
+    preview_svg: str = ""
     status: Literal["new", "quoted", "reviewed", "archived"] = "quoted"
     created_at: datetime = Field(default_factory=datetime.utcnow)
