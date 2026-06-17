@@ -1,7 +1,7 @@
 ALUMINUM_DENSITY = 2.7        # g/cm³
 MATERIAL_PRICE = 5.00         # $/kg
 MACHINE_RATE = 100.0          # $/hr
-SETUP_HOURS = 1.5             # hrs, assumed fixed per job (implied by PDF example: $15/unit at qty 10)
+SETUP_HOURS_PER_SETUP = 0.75  # hrs per fixturing orientation; ~1.5hr for a typical 2-setup part (PDF example: $15/unit at qty 10)
 MRR = 150.0                   # cm³/min, material removal rate on Haas for 6061 aluminum
 
 # Standard aluminum stock thicknesses in inches
@@ -35,14 +35,14 @@ def complexity_score(geometry: dict, features: dict, stock_volume_cm3: float, ma
     sa_to_vol      = geometry["surface_area_cm2"] / max(geometry["volume_cm3"], 0.001)
     accessibility  = geometry["surface_area_cm2"] / max(geometry["bbox_surface_area_cm2"], 0.001)
     removal_ratio  = material_removed / max(stock_volume_cm3, 0.001)
-    setups         = features["estimated_setups"]
 
+    # Orientation count (estimated_setups) is priced directly into setup cost,
+    # not here, so it isn't charged twice.
     score = (1.0
         + (cyl_ratio * 0.5)
         + (sa_to_vol / 20)
         + (accessibility * 0.2)
-        + (removal_ratio * 0.3)
-        + ((max(setups, 1) - 1) * 0.3))
+        + (removal_ratio * 0.3))
 
     return round(min(score, 4.0), 2)
 
@@ -68,8 +68,8 @@ def calculate(geometry: dict, features: dict, quantity: int) -> tuple[dict, int,
     discount = quantity_discount(quantity)
     machine_time_cost = cutting_hours * complexity * MACHINE_RATE * (1 - discount)
 
-    # Setup cost — amortized across quantity
-    setup_cost = SETUP_HOURS * MACHINE_RATE / quantity
+    # Setup cost: per-orientation fixturing labor, amortized across quantity
+    setup_cost = SETUP_HOURS_PER_SETUP * features["estimated_setups"] * MACHINE_RATE / quantity
 
     total_per_unit = material_cost + machine_time_cost + setup_cost
     total_order    = total_per_unit * quantity
