@@ -1,7 +1,7 @@
 ALUMINUM_DENSITY = 2.7        # g/cm³
 MATERIAL_PRICE = 5.00         # $/kg
 MACHINE_RATE = 100.0          # $/hr
-SETUP_HOURS = 1.0             # hrs, assumed fixed per job
+SETUP_HOURS = 1.5             # hrs, assumed fixed per job (implied by PDF example: $15/unit at qty 10)
 MRR = 150.0                   # cm³/min, material removal rate on Haas for 6061 aluminum
 
 # Standard aluminum stock thicknesses in inches
