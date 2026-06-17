@@ -38,9 +38,21 @@ interface Quote {
   lead_time_days: number;
   status: string;
   created_at: string;
+  preview_svg: string;
 }
 
 const fmt = (n: number) => `$${n.toFixed(2)}`;
+
+function PartPreview({ svg, className }: { svg?: string; className?: string }) {
+  if (!svg) return null;
+  return (
+    <img
+      src={`data:image/svg+xml,${encodeURIComponent(svg)}`}
+      alt="part preview"
+      className={className}
+    />
+  );
+}
 
 export default function Home() {
   const [file, setFile] = useState<File | null>(null);
@@ -58,7 +70,7 @@ export default function Home() {
 
   async function updateStatus(id: string, status: string) {
     await fetch(`${API}/quotes/${id}/status?status=${status}`, { method: "PATCH" });
-    setSelected((prev) => prev ? { ...prev, status } : null);
+    setSelected((prev) => (prev ? { ...prev, status } : null));
     await fetchQuotes();
   }
 
@@ -111,10 +123,10 @@ export default function Home() {
           </h2>
           <form
             onSubmit={handleSubmit}
-            className="bg-[#161b22] border border-zinc-800 rounded-lg p-6 space-y-4"
+            className="bg-[#161b22] border border-zinc-800 rounded-none p-6 space-y-4"
           >
             <div
-              className="border-2 border-dashed border-zinc-700 rounded-lg p-8 text-center cursor-pointer hover:border-blue-500 transition-colors"
+              className="border-2 border-dashed border-zinc-700 rounded-none p-8 text-center cursor-pointer hover:border-blue-500 transition-colors"
               onClick={() => fileRef.current?.click()}
             >
               <input
@@ -139,17 +151,35 @@ export default function Home() {
               <label className="text-xs font-mono text-zinc-500 uppercase tracking-widest">
                 Quantity
               </label>
-              <input
-                type="number"
-                min={1}
-                value={quantity}
-                onChange={(e) => setQuantity(Number(e.target.value))}
-                className="bg-zinc-800 border border-zinc-700 rounded px-3 py-2 w-24 text-zinc-100 font-mono focus:outline-none focus:border-blue-500"
-              />
+              <div className="flex items-stretch border border-zinc-700">
+                <button
+                  type="button"
+                  onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                  className="px-3 bg-zinc-800 text-zinc-300 font-mono hover:bg-zinc-700 hover:text-white transition-colors"
+                >
+                  −
+                </button>
+                <input
+                  type="number"
+                  min={1}
+                  value={quantity}
+                  onChange={(e) =>
+                    setQuantity(Math.max(1, Number(e.target.value) || 1))
+                  }
+                  className="w-16 text-center bg-zinc-900 border-x border-zinc-700 py-2 text-zinc-100 font-mono focus:outline-none focus:bg-zinc-800 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                />
+                <button
+                  type="button"
+                  onClick={() => setQuantity((q) => q + 1)}
+                  className="px-3 bg-zinc-800 text-zinc-300 font-mono hover:bg-zinc-700 hover:text-white transition-colors"
+                >
+                  +
+                </button>
+              </div>
               <button
                 type="submit"
                 disabled={!file || loading}
-                className="ml-auto bg-blue-500 text-zinc-950 font-mono font-bold px-6 py-2 rounded hover:bg-blue-400 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                className="ml-auto bg-blue-500 text-zinc-950 font-mono font-bold px-6 py-2 rounded-none hover:bg-blue-400 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
               >
                 {loading ? "Analyzing..." : "Generate Quote"}
               </button>
@@ -166,15 +196,23 @@ export default function Home() {
             <h2 className="text-xs font-mono text-zinc-500 uppercase tracking-widest mb-4">
               Quote Result
             </h2>
-            <div className="bg-[#161b22] border border-blue-500/40 rounded-lg p-6 space-y-6 shadow-[0_0_30px_rgba(59,130,246,0.08)]">
-              <div className="flex justify-between items-start">
-                <div>
-                  <p className="font-mono text-white text-sm">
-                    {result.file_name}
-                  </p>
-                  <p className="text-zinc-500 text-xs mt-1">
-                    Qty {result.quantity} · {result.material}
-                  </p>
+            <div className="bg-[#161b22] border border-blue-500/40 rounded-none p-6 space-y-6 shadow-[0_0_30px_rgba(59,130,246,0.08)]">
+              <div className="flex justify-between items-start gap-6">
+                <div className="flex gap-5">
+                  <div className="w-32 h-32 shrink-0 border border-zinc-800 bg-[#0d1117] flex items-center justify-center">
+                    <PartPreview
+                      svg={result.preview_svg}
+                      className="w-full h-full object-contain"
+                    />
+                  </div>
+                  <div>
+                    <p className="font-mono text-white text-sm">
+                      {result.file_name}
+                    </p>
+                    <p className="text-zinc-500 text-xs mt-1">
+                      Qty {result.quantity} · {result.material}
+                    </p>
+                  </div>
                 </div>
                 <p className="font-mono text-2xl">
                   {fmt(result.cost_breakdown.total_order_cost)}
@@ -307,30 +345,63 @@ export default function Home() {
           {quotes.length === 0 ? (
             <p className="text-zinc-600 text-sm font-mono">No quotes yet.</p>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {quotes.map((q) => (
-                <div
-                  key={q.id}
-                  onClick={() => setSelected(q)}
-                  className="bg-[#161b22] border border-zinc-800 rounded-lg p-4 cursor-pointer hover:border-blue-500/50 hover:shadow-[0_0_20px_rgba(59,130,246,0.06)] transition-all space-y-2"
-                >
-                  <p className="font-mono text-sm text-white truncate">
-                    {q.file_name}
-                  </p>
-                  <p className="font-mono text-xl text-zinc-100">
-                    {fmt(q.cost_breakdown.total_order_cost)}
-                  </p>
-                  <div className="flex justify-between items-center">
-                    <p className="text-xs text-zinc-500">Qty {q.quantity}</p>
-                    <span className="text-xs font-mono px-2 py-0.5 rounded bg-zinc-800 text-zinc-300">
-                      {q.status}
-                    </span>
-                  </div>
-                  <p className="text-xs text-zinc-600">
-                    {new Date(q.created_at).toLocaleDateString()}
-                  </p>
-                </div>
-              ))}
+            <div className="border border-zinc-800 overflow-x-auto">
+              <table className="w-full text-sm font-mono">
+                <thead>
+                  <tr className="text-xs text-zinc-500 uppercase tracking-widest text-left border-b border-zinc-800">
+                    <th className="px-4 py-3 font-normal">Part</th>
+                    <th className="px-4 py-3 font-normal text-right">Qty</th>
+                    <th className="px-4 py-3 font-normal text-right">Complexity</th>
+                    <th className="px-4 py-3 font-normal text-right">Lead</th>
+                    <th className="px-4 py-3 font-normal text-right">Total</th>
+                    <th className="px-4 py-3 font-normal">Status</th>
+                    <th className="px-4 py-3 font-normal text-right">Date</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {quotes.map((q) => (
+                    <tr
+                      key={q.id}
+                      onClick={() => setSelected(q)}
+                      className="border-b border-zinc-800/60 last:border-0 cursor-pointer hover:bg-[#1c2230] transition-colors"
+                    >
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-12 h-12 shrink-0 border border-zinc-800 bg-[#0d1117] flex items-center justify-center">
+                            <PartPreview
+                              svg={q.preview_svg}
+                              className="w-full h-full object-contain"
+                            />
+                          </div>
+                          <span className="text-white truncate max-w-[14rem]">
+                            {q.file_name}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-right text-zinc-300">
+                        {q.quantity}
+                      </td>
+                      <td className="px-4 py-3 text-right text-zinc-300">
+                        {q.features.complexity_score}
+                      </td>
+                      <td className="px-4 py-3 text-right text-zinc-300">
+                        {q.lead_time_days}d
+                      </td>
+                      <td className="px-4 py-3 text-right text-zinc-100">
+                        {fmt(q.cost_breakdown.total_order_cost)}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="text-xs px-2 py-0.5 rounded-none bg-zinc-800 text-zinc-300">
+                          {q.status}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-right text-zinc-500 text-xs">
+                        {new Date(q.created_at).toLocaleDateString()}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
         </section>
@@ -343,15 +414,23 @@ export default function Home() {
           onClick={() => setSelected(null)}
         >
           <div
-            className="bg-[#161b22] border border-zinc-700 rounded-lg p-6 max-w-lg w-full space-y-4 shadow-[0_0_40px_rgba(59,130,246,0.1)]"
+            className="bg-[#161b22] border border-zinc-700 rounded-none p-6 max-w-lg w-full space-y-4 shadow-[0_0_40px_rgba(59,130,246,0.1)]"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex justify-between items-start">
-              <div>
-                <p className="font-mono text-white">{selected.file_name}</p>
-                <p className="text-zinc-500 text-xs mt-1">
-                  Qty {selected.quantity} · {selected.material}
-                </p>
+            <div className="flex justify-between items-start gap-4">
+              <div className="flex gap-4">
+                <div className="w-24 h-24 shrink-0 border border-zinc-800 bg-[#0d1117] flex items-center justify-center">
+                  <PartPreview
+                    svg={selected.preview_svg}
+                    className="w-full h-full object-contain"
+                  />
+                </div>
+                <div>
+                  <p className="font-mono text-white">{selected.file_name}</p>
+                  <p className="text-zinc-500 text-xs mt-1">
+                    Qty {selected.quantity} · {selected.material}
+                  </p>
+                </div>
               </div>
               <button
                 onClick={() => setSelected(null)}
@@ -475,7 +554,7 @@ export default function Home() {
               <select
                 value={selected.status}
                 onChange={(e) => updateStatus(selected.id, e.target.value)}
-                className="text-xs font-mono px-2 py-0.5 rounded bg-zinc-800 text-zinc-300 border border-zinc-700 focus:outline-none focus:border-blue-500 cursor-pointer"
+                className="text-xs font-mono px-2 py-0.5 rounded-none bg-zinc-800 text-zinc-300 border border-zinc-700 focus:outline-none focus:border-blue-500 cursor-pointer"
               >
                 <option value="new">new</option>
                 <option value="quoted">quoted</option>
