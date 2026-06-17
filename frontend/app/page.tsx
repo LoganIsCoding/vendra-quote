@@ -17,6 +17,7 @@ interface Quote {
   material: string;
   geometry: {
     bounding_box_mm: BoundingBox;
+    stock_dimensions_mm: BoundingBox;
     volume_cm3: number;
     surface_area_cm2: number;
   };
@@ -24,6 +25,7 @@ interface Quote {
     face_count: number;
     edge_count: number;
     holes_detected: number;
+    estimated_setups: number;
     complexity_score: number;
   };
   cost_breakdown: {
@@ -194,6 +196,14 @@ export default function Home() {
                       </span>
                     </p>
                     <p className="text-zinc-300">
+                      Stock:{" "}
+                      <span className="text-zinc-100">
+                        {result.geometry.stock_dimensions_mm.length} ×{" "}
+                        {result.geometry.stock_dimensions_mm.width} ×{" "}
+                        {result.geometry.stock_dimensions_mm.height} mm
+                      </span>
+                    </p>
+                    <p className="text-zinc-300">
                       Volume:{" "}
                       <span className="text-zinc-100">
                         {result.geometry.volume_cm3} cm³
@@ -221,6 +231,12 @@ export default function Home() {
                       Holes detected:{" "}
                       <span className="text-zinc-100">
                         {result.features.holes_detected}
+                      </span>
+                    </p>
+                    <p className="text-zinc-300">
+                      Estimated setups:{" "}
+                      <span className="text-zinc-100">
+                        {result.features.estimated_setups}
                       </span>
                     </p>
                     <p className="text-zinc-300">
@@ -358,6 +374,14 @@ export default function Home() {
                 </span>
               </p>
               <p className="text-zinc-300">
+                Stock:{" "}
+                <span className="text-zinc-100">
+                  {selected.geometry.stock_dimensions_mm.length} ×{" "}
+                  {selected.geometry.stock_dimensions_mm.width} ×{" "}
+                  {selected.geometry.stock_dimensions_mm.height} mm
+                </span>
+              </p>
+              <p className="text-zinc-300">
                 Volume:{" "}
                 <span className="text-zinc-100">
                   {selected.geometry.volume_cm3} cm³
@@ -385,6 +409,12 @@ export default function Home() {
                 Holes detected:{" "}
                 <span className="text-zinc-100">
                   {selected.features.holes_detected}
+                </span>
+              </p>
+              <p className="text-zinc-300">
+                Estimated setups:{" "}
+                <span className="text-zinc-100">
+                  {selected.features.estimated_setups}
                 </span>
               </p>
               <p className="text-zinc-300">
