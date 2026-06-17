@@ -11,6 +11,7 @@ class BoundingBox(BaseModel):
 
 class Geometry(BaseModel):
     bounding_box_mm: BoundingBox
+    stock_dimensions_mm: BoundingBox
     volume_cm3: float
     surface_area_cm2: float
 
@@ -19,6 +20,7 @@ class Features(BaseModel):
     face_count: int
     edge_count: int
     holes_detected: int
+    estimated_setups: int
     complexity_score: float
 
 
