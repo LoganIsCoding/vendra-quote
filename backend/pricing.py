@@ -2,7 +2,8 @@ ALUMINUM_DENSITY = 2.7        # g/cm³
 MATERIAL_PRICE = 5.00         # $/kg
 MACHINE_RATE = 100.0          # $/hr
 SETUP_HOURS_PER_SETUP = 0.75  # hrs per fixturing orientation; ~1.5hr for a typical 2-setup part (PDF example: $15/unit at qty 10)
-MRR = 150.0                   # cm³/min, material removal rate on Haas for 6061 aluminum
+MRR = 150.0                   # cm³/min, material removal rate (roughing) on Haas for 6061 aluminum
+FINISH_RATE = 0.0014          # hr per cm² of surface area, finishing pass time (calibrated to PDF example)
 
 # Standard aluminum stock thicknesses in inches
 STANDARD_THICKNESSES_IN = [0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 2.0, 2.5, 3.0, 4.0]
@@ -30,19 +31,20 @@ def quantity_discount(quantity: int) -> float:
     return 0.0
 
 
-def complexity_score(geometry: dict, features: dict, stock_volume_cm3: float, material_removed: float) -> float:
+def complexity_score(geometry: dict, features: dict) -> float:
+    # cyl_ratio: drilling-operation density (true holes per face)
+    # sa_to_vol: fine-detail penalty, small intricate parts cost more per unit area
+    # accessibility: part surface vs bounding-box surface, a proxy for hard-to-reach features
     cyl_ratio      = features["holes_detected"] / max(features["face_count"], 1)
     sa_to_vol      = geometry["surface_area_cm2"] / max(geometry["volume_cm3"], 0.001)
     accessibility  = geometry["surface_area_cm2"] / max(geometry["bbox_surface_area_cm2"], 0.001)
-    removal_ratio  = material_removed / max(stock_volume_cm3, 0.001)
 
-    # Orientation count (estimated_setups) is priced directly into setup cost,
-    # not here, so it isn't charged twice.
+    # Material removal is priced into roughing time, and orientation count into
+    # setup cost, so neither is charged again here.
     score = (1.0
         + (cyl_ratio * 0.5)
         + (sa_to_vol / 20)
-        + (accessibility * 0.2)
-        + (removal_ratio * 0.3))
+        + (accessibility * 0.2))
 
     return round(min(score, 4.0), 2)
 
@@ -58,13 +60,15 @@ def calculate(geometry: dict, features: dict, quantity: int) -> tuple[dict, int,
     part_volume_cm3  = geometry["volume_cm3"]
     material_removed = stock_volume_cm3 - part_volume_cm3
 
-    complexity = complexity_score(geometry, features, stock_volume_cm3, material_removed)
+    complexity = complexity_score(geometry, features)
 
     # Material cost — based on stock volume (what the shop actually purchases)
     material_cost = stock_volume_cm3 * ALUMINUM_DENSITY / 1000 * MATERIAL_PRICE
 
-    # Cutting time and cost
-    cutting_hours = (material_removed / MRR) / 60
+    # Cutting time: roughing (bulk removal) plus finishing (surface passes)
+    roughing_hours  = (material_removed / MRR) / 60
+    finishing_hours = geometry["surface_area_cm2"] * FINISH_RATE
+    cutting_hours   = roughing_hours + finishing_hours
     discount = quantity_discount(quantity)
     machine_time_cost = cutting_hours * complexity * MACHINE_RATE * (1 - discount)
 
@@ -76,7 +80,7 @@ def calculate(geometry: dict, features: dict, quantity: int) -> tuple[dict, int,
 
     # Lead time: 5 day minimum + production days + complexity buffer
     production_days   = max(1, round(cutting_hours * quantity / 8))
-    complexity_buffer = round(complexity - 1.0)
+    complexity_buffer = round((complexity - 1.0) * 2)
     lead_time_days    = 5 + production_days + complexity_buffer
 
     cost_breakdown = {
