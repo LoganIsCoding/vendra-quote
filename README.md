@@ -13,15 +13,27 @@ The geometry engine is Python, so the backend imports it directly with no subpro
 
 ## Setup
 
-### 1. Database
+There are two ways to run this: Docker builds and runs all three services for you, the manual path runs each one yourself with hot reload.
+
+### Option A: Docker (all three services)
 
 ```bash
-docker compose up -d
+docker compose up -d --build
 ```
 
-Starts MongoDB 7 on port 27017 with a persistent volume.
+Builds and starts MongoDB, the backend (`http://localhost:8000`), and the frontend (`http://localhost:3000`) together. The backend image installs cadquery/OCP and the system libs it needs (`libgl1`, `libglu1-mesa`, etc.) on top of `python:3.11-slim`; the frontend image is a multi-stage Next.js standalone build. This is the fastest way to get the whole app running, but doesn't support hot reload, use Option B for active development.
 
-### 2. Backend
+### Option B: Manual setup
+
+#### 1. Database
+
+```bash
+docker compose up -d mongodb
+```
+
+Starts MongoDB 7 on port 27017 with a persistent volume. (Naming the service matters here, plain `docker compose up -d` would also build and start the backend and frontend containers, which conflicts with running them manually in the next two steps.)
+
+#### 2. Backend
 
 ```bash
 python -m pip install -r requirements.txt
@@ -32,7 +44,7 @@ Runs on `http://localhost:8000`. Interactive API docs at `http://localhost:8000/
 
 If `python` isn't found, use `python3` instead, macOS and most Linux distros don't alias a plain `python` command by default.
 
-### 3. Frontend
+#### 3. Frontend
 
 ```bash
 cd frontend
@@ -51,6 +63,15 @@ The geometry analysis runs on its own, directly on a `.STEP` file, with no backe
 ```bash
 python geometry/analyze.py "path/to/part.step"
 ```
+
+This requires `requirements.txt` installed locally (cadquery in particular). If you'd rather not install that just to run the standalone command, reuse the backend's Docker image instead, it already has cadquery baked in, no local Python setup needed:
+
+```bash
+docker compose build backend
+docker compose run --rm -v "$(pwd)/tests/fixtures:/data" backend python geometry/analyze.py /data/bracket.step
+```
+
+Mount whatever host directory contains your `.step` file in place of `tests/fixtures`.
 
 Example output (vendra-bracket):
 
