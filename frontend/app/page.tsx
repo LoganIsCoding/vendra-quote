@@ -106,11 +106,10 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-[#0d1117] text-zinc-100 font-sans">
-      <header className="border-b border-zinc-800 px-8 py-4">
-        <span className="text-white font-mono font-bold tracking-widest text-sm uppercase">
-          Vendra
-        </span>
-        <span className="text-zinc-500 font-mono text-sm ml-2">
+      <header className="border-b border-zinc-800 px-8 py-4 flex items-center">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/vendra-logo.svg" alt="Vendra" className="h-7" />
+        <span className="text-zinc-500 font-mono text-sm ml-3">
           // CNC Quote Engine
         </span>
       </header>
