@@ -38,7 +38,9 @@ The detector only considers cylindrical faces, so it only finds round holes. A s
 
 ## How setups are detected
 
-This is the heuristic I am most happy with. Each cylindrical face has an axis. I record the dominant axis (X, Y, or Z) of each cylindrical face's direction and count the distinct axes. On a 3-axis machine, features facing different axes require the part to be reoriented (flipped) between operations, so the number of distinct cylinder axes is a proxy for the number of setups. It returns 2 for the gear and 2 for the bracket, and held up when I ran it against a few other STEP files informally, matching how those parts would actually be fixtured. The setup count then drives both setup cost and lead time.
+Each cylindrical face has a surface normal, sampled at a default point on the face. I take the dominant component of that normal (X, Y, or Z) and count the distinct buckets. On a 3-axis machine, features facing different axes require the part to be reoriented (flipped) between operations, so the number of distinct buckets is a proxy for the number of setups. It returns 2 for the gear and 2 for the bracket, matching how I'd actually expect those parts to be fixtured. The setup count then drives both setup cost and lead time.
+
+This is a proxy, not a true axis computation, and it has real gaps. It has no signal for conical features (so it misses the gear's tapered teeth), and it can't tell a real bore from a cosmetic rounded edge (so a fillet can register as its own setup). I tried fixing both by switching to the cylinder's true axis, and it scored worse on both test parts, so I kept the simpler version and am flagging the tradeoff here instead.
 
 ## How complexity is detected
 
